@@ -40,8 +40,13 @@ namespace RegenerationUpgrade.Patches
                 return;
 
             float bloodRegenScale = GetNaturalHealingFactor(pawn)
-                * pawn.GetStatValue(StatDefOf.InjuryHealingFactor) // Множитель от скорости лечения ран
-                * GetRegenerationFactor(pawn);
+                * pawn.GetStatValue(StatDefOf.InjuryHealingFactor); // Множитель от скорости лечения ран
+
+            var regenerationField = typeof(HediffStage).GetField("regeneration", BindingFlags.Public | BindingFlags.Instance);
+            if (regenerationField != null) {
+                bloodRegenScale *= GetRegenerationFactor(pawn);
+            }
+
 
             if (VefModActive)
             {
@@ -132,7 +137,9 @@ namespace RegenerationUpgrade.Patches
         {
             float factor = MIN_FACTOR_VAL;
 
-            ThingComp comp = pawn.AllComps?.FirstOrDefault(c => c.GetType().FullName == "VEF.AnimalBehaviours.CompRegeneration");
+            ThingComp compNew = pawn.AllComps?.FirstOrDefault(c => c.GetType().FullName == "VEF.AnimalBehaviours.CompRegeneration");
+            ThingComp compOld = pawn.AllComps?.FirstOrDefault(c => c.GetType().FullName == "AnimalBehaviours.CompRegeneration");
+            ThingComp comp    = compNew ?? compOld;
             if (comp != null)
             {
                 var props = comp.props;
@@ -143,16 +150,19 @@ namespace RegenerationUpgrade.Patches
                 var needsSunField    = props.GetType().GetField("needsSun",    BindingFlags.Public | BindingFlags.Instance);
                 var needsWaterField  = props.GetType().GetField("needsWater",  BindingFlags.Public | BindingFlags.Instance);
 
-                if (rateInTicksField != null && healAmountField != null && needsSunField != null && needsWaterField != null)
+                if (rateInTicksField != null && healAmountField != null)
                 {
                     int rateInTicks  = (int)rateInTicksField.GetValue(props);
                     float healAmount = (float)healAmountField.GetValue(props);
-                    bool needsSun    = (bool)needsSunField.GetValue(props);
-                    bool needsWater  = (bool)needsWaterField.GetValue(props);
 
-                    // Если не выполняются условия регенерации, не учитываем ее
-                    if (!IsVefRegenerationAvailable(pawn, needsSun, needsWater))
-                        return factor;
+                    if (needsSunField != null && needsWaterField != null) {
+                        bool needsSun    = (bool)needsSunField.GetValue(props);
+                        bool needsWater  = (bool)needsWaterField.GetValue(props);
+
+                        // Если не выполняются условия регенерации, не учитываем ее
+                        if (!IsVefRegenerationAvailable(pawn, needsSun, needsWater))
+                            return factor;
+                    }
 
                     float healPerDay = (TICKS_IN_DAY / rateInTicks) * healAmount;
 
@@ -174,7 +184,7 @@ namespace RegenerationUpgrade.Patches
                 {
                     foreach (HediffComp comp in hediffWithComps.comps)
                     {
-                        if (comp.GetType().FullName == "VEF.AnimalBehaviours.HediffComp_Regeneration")
+                        if (comp.GetType().FullName == "VEF.AnimalBehaviours.HediffComp_Regeneration" || comp.GetType().FullName == "AnimalBehaviours.HediffComp_Regeneration")
                         {
                             var props = comp.props;
 
