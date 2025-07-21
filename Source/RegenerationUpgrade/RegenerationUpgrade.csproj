@@ -58,6 +58,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Patches\HealthTickInterval_Patch.cs" />
     <Compile Include="Patches\HediffGiver_Bleeding_Patch.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RegenerationUpgrade_Mod.cs" />
