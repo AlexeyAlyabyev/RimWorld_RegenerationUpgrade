@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using VEF.Things;
 using Verse;
 
 namespace RegenerationUpgrade.Patches
@@ -65,13 +66,13 @@ namespace RegenerationUpgrade.Patches
                 }
             }
 
-            // Первоочередно после кровотечения и фильтрации крови лечим Кровообращение, Дыхание или Сознание до относительно безопасных значений в 50%
-            Hediff_Injury lifeThreatingCapacityInjury = GetMostDangerousLifeThreatingCapacityInjury(pawn, injuries, 0.5f);
+            // Первоочередно после кровотечения и фильтрации крови лечим Кровообращение, Дыхание или Сознание до минимально безопасных значений в 30%
+            Hediff_Injury lifeThreatingCapacityInjury = GetMostDangerousLifeThreatingCapacityInjury(pawn, injuries, 0.3f);
             if (lifeThreatingCapacityInjury != null)
                 return lifeThreatingCapacityInjury;
 
 
-            // Восстанавливаем части тела, которые могут привести к смерти при дальнейших повреждениях
+            // Восстанавливаем части тела, которые могут привести к смерти при дальнейших повреждениях до 30%
             Hediff_Injury closestToDeathInjury = GetClosestToDeathPartOfTheBody(pawn, injuries);
             if (closestToDeathInjury != null)
                 return closestToDeathInjury;
@@ -288,32 +289,32 @@ namespace RegenerationUpgrade.Patches
             List<PawnCapacityDef> allDefsListForReading = DefDatabase<PawnCapacityDef>.AllDefsListForReading;
             PawnCapacitiesHandler capacities = new PawnCapacitiesHandler(pawn);
 
-            Log.Message($"PAWN {pawn.LabelShort} ");
+            //Log.Message($"PAWN {pawn.LabelShort} ");
             List<PawnCapacityDef> vitalCapacitiesList = new List<PawnCapacityDef>();
             for (int i = 0; i < allDefsListForReading.Count; i++)
             {
                 PawnCapacityDef pawnCapacityDef = allDefsListForReading[i];
-                Log.Message($"{i + 1}. {allDefsListForReading[i].defName} ({allDefsListForReading[i].label}), isLethal {(pawn.RaceProps.IsFlesh ? pawnCapacityDef.lethalFlesh : pawnCapacityDef.lethalMechanoids)}");
+                //Log.Message($"{i + 1}. {allDefsListForReading[i].defName} ({allDefsListForReading[i].label}), isLethal {(pawn.RaceProps.IsFlesh ? pawnCapacityDef.lethalFlesh : pawnCapacityDef.lethalMechanoids)}");
                 // Если для текущего вида пешки параметр смертельно важен, делаем для него расчет
                 if (pawn.RaceProps.IsFlesh ? pawnCapacityDef.lethalFlesh : pawnCapacityDef.lethalMechanoids)
                 {
                     vitalCapacitiesList.Add(pawnCapacityDef);
                 }
             }
-            Log.Message("=== Vital capacities list for " + pawn.LabelShort + " ===");
-            for (int i = 0; i < vitalCapacitiesList.Count; i++)
-            {
-                Log.Message($"{i + 1}. {vitalCapacitiesList[i].defName} ({vitalCapacitiesList[i].label})");
-            }
+            Log.Message("============ Vital body part capacities for " + pawn.LabelShort + " ============");
+            //for (int i = 0; i < vitalCapacitiesList.Count; i++)
+            //{
+            //    Log.Message($"{i + 1}. {vitalCapacitiesList[i].defName} ({vitalCapacitiesList[i].label})");
+            //}
             foreach (var injury in injuries)
             {
                 var part = injury.Part;
-                Log.Message($"Part {part.LabelShort}, PartIsMissing: {pawn.health.hediffSet.PartIsMissing(part)} ");
+                //Log.Message($"Part {part.LabelShort}, PartIsMissing: {pawn.health.hediffSet.PartIsMissing(part)} ");
                 if (part == null || pawn.health.hediffSet.PartIsMissing(part))
                     continue;
 
                 float partMaxHp = part.def.GetMaxHealth(pawn);
-                Log.Message($"partMaxHp {partMaxHp}");
+                //Log.Message($"partMaxHp {partMaxHp}");
                 if (partMaxHp <= 0f)
                     continue;
 
@@ -322,7 +323,7 @@ namespace RegenerationUpgrade.Patches
 
                 foreach (var vitalCapacity in vitalCapacitiesList)
                 {
-                    capacityImpactWeight += BodyPartAffectsCapacity(vitalCapacity, part);
+                    capacityImpactWeight += BodyPartAffectsCapacity(vitalCapacity, part, pawn.health.hediffSet);
                     //if (BodyPartAffectsCapacity(vitalCapacity, part))
                     //{
                     //    Log.Message($"{part.LabelCap} влияет на {vitalCapacity.LabelCap}.");
@@ -336,29 +337,30 @@ namespace RegenerationUpgrade.Patches
                     //    continue;
                     //}
                 }
-            }
 
+                Log.Message($"Вес влияния {part.LabelCap} на все жизненно важные параметры: {capacityImpactWeight}");
+            }
 
             return closestToDeathInjury;
         }
 
-        public static float BodyPartAffectsCapacity(PawnCapacityDef capacityDef, BodyPartRecord part)
+        public static float BodyPartAffectsCapacity(PawnCapacityDef capacityDef, BodyPartRecord part, HediffSet diffSet)
         {
-            var dict = GetTagsUsedByCapacityWithWeights(capacityDef);
+            var dict = GetTagsUsedByCapacityWithWeights(capacityDef, diffSet);
             float partCapacityFactor = 0f;
 
             // Логируем все теги, если включена разработка или диагностика
-            Log.Message($"Проверка части '{part.LabelCap}' на влияние на способность '{capacityDef.defName}'");
-
-            if (dict == null || dict.Count == 0)
-            {
-                Log.Message("  Способность не использует BodyPartTagDef (tags == null или пусто).");
-                return partCapacityFactor;
-            }
+            //Log.Message($"Проверка части '{part.LabelCap}' на влияние на способность '{capacityDef.defName}'");
 
             if (part.def.tags == null || part.def.tags.Count == 0)
             {
-                Log.Message("  У части тела нет тегов (part.def.tags == null или пусто).");
+                //Log.Message("  У части тела нет тегов (part.def.tags == null или пусто).");
+                return partCapacityFactor;
+            }
+
+            if (dict == null || dict.Count == 0)
+            {
+                //Log.Message("  Способность не использует BodyPartTagDef (tags == null или пусто).");
                 return partCapacityFactor;
             }
 
@@ -366,7 +368,9 @@ namespace RegenerationUpgrade.Patches
             {
                 partCapacityFactor += dict.TryGetValue(partTag, out float weight) ? weight : 0f;
             }
-            Log.Message($"'{part.LabelCap}', partCapacityFactor {partCapacityFactor}");
+
+            //if (partCapacityFactor > 0f)
+            //    Log.Message($"'{part.LabelCap}', влияние на способность '{capacityDef.defName}': {partCapacityFactor}");
 
             return partCapacityFactor;
 
@@ -383,72 +387,200 @@ namespace RegenerationUpgrade.Patches
             //return matchingTags.Count > 0;
         }
 
-        public static Dictionary<BodyPartTagDef, float> GetTagsUsedByCapacityWithWeights(PawnCapacityDef def)
+        public static Dictionary<BodyPartTagDef, float> GetTagsUsedByCapacityWithWeights(PawnCapacityDef def, HediffSet diffSet)
         {
             var tags = new Dictionary<BodyPartTagDef, float>();
+            // Сознание
+            float ConsciousnessSourceFactor = CalculateBodyPartTagEfficiencyFactor(diffSet, BodyPartTagDefOf.ConsciousnessSource, float.MaxValue);
+            // Дыхание
+            float BreathingSourceFactor = CalculateBodyPartTagEfficiencyFactor(diffSet, BodyPartTagDefOf.BreathingSource, float.MaxValue);
+            float BreathingPathwayFactor = CalculateBodyPartTagEfficiencyFactor(diffSet, BodyPartTagDefOf.BreathingPathway, 1f);
+            float BreathingSourceCageFactor = CalculateBodyPartTagEfficiencyFactor(diffSet, BodyPartTagDefOf.BreathingSourceCage, 1f);
+            // Кровообращение
+            float BloodPumpingSourceFactor = CalculateBodyPartTagEfficiencyFactor(diffSet, BodyPartTagDefOf.BloodPumpingSource, float.MaxValue);
+            // Фильтрация крови
+            float BloodFiltrationKidneyFactor = 0f;
+            float BloodFiltrationLiverFactor = 0f;
+            float BloodFiltrationSourceFactor = 0f;
+            if (diffSet.pawn.RaceProps.body.HasPartWithTag(BodyPartTagDefOf.BloodFiltrationKidney))
+            {
+                BloodFiltrationKidneyFactor = CalculateBodyPartTagEfficiencyFactor(diffSet, BodyPartTagDefOf.BloodFiltrationKidney, float.MaxValue);
+                BloodFiltrationLiverFactor = CalculateBodyPartTagEfficiencyFactor(diffSet, BodyPartTagDefOf.BloodFiltrationLiver, float.MaxValue);
+            }
+            else
+            {
+                BloodFiltrationSourceFactor = CalculateBodyPartTagEfficiencyFactor(diffSet, BodyPartTagDefOf.BloodFiltrationSource, float.MaxValue);
+            }
+            // Метаболизм
+            float MetabolismSourceFactor = CalculateBodyPartTagEfficiencyFactor(diffSet, BodyPartTagDefOf.MetabolismSource, float.MaxValue);
+            // Слух
+            float HearingSourceFactor = CalculateBodyPartTagEfficiencyFactor(diffSet, BodyPartTagDefOf.MetabolismSource, float.MaxValue, 0.75f);
+            // Зрение
+            float SightSourceFactor = CalculateBodyPartTagEfficiencyFactor(diffSet, BodyPartTagDefOf.SightSource, float.MaxValue, 0.75f);
+            // Речь
+            float TalkingSourceFactor = CalculateBodyPartTagEfficiencyFactor(diffSet, BodyPartTagDefOf.TalkingSource, float.MaxValue);
+            float TalkingPathwayFactor = CalculateBodyPartTagEfficiencyFactor(diffSet, BodyPartTagDefOf.TalkingPathway, 1f);
+            float TongueFactor = CalculateBodyPartTagEfficiencyFactor(diffSet, BodyPartTagDefOf.Tongue, 1f);
+            // Питание
+            float EatingSourceFactor = CalculateBodyPartTagEfficiencyFactor(diffSet, BodyPartTagDefOf.EatingSource, float.MaxValue);
+            float EatingPathwayFactor = CalculateBodyPartTagEfficiencyFactor(diffSet, BodyPartTagDefOf.EatingPathway, 1f);
+            // Работа
+            float functionalPercentageManipulation = 0f;
+            float ManipulationFactor = PawnCapacityUtility.CalculateLimbEfficiency(diffSet, BodyPartTagDefOf.ManipulationLimbCore, BodyPartTagDefOf.ManipulationLimbSegment, BodyPartTagDefOf.ManipulationLimbDigit, 0.8f, out functionalPercentageManipulation, null);
+            if (ManipulationFactor > 1f)
+            {
+                ManipulationFactor = 1f;
+            }
+            ManipulationFactor = 1f - ManipulationFactor;
+            // Движение
+            float functionalPercentageMoving = 0f;
+            float MovingFactor = PawnCapacityUtility.CalculateLimbEfficiency(diffSet, BodyPartTagDefOf.MovingLimbCore, BodyPartTagDefOf.MovingLimbSegment, BodyPartTagDefOf.MovingLimbDigit, 0.4f, out functionalPercentageMoving, null);
+            // Если у пешки уничтодено больше половины ног, она не может ходить (Для человека 2 ноги из 2, для пауков 4 ноги из 6 и т.д.)
+            if (functionalPercentageMoving < 0.4999f)
+            {
+                MovingFactor = 0f;
+            }
+            if (MovingFactor > 1f)
+            {
+                MovingFactor = 1f;
+            }
+            MovingFactor = 1f - MovingFactor;
+            float PelvisFactor = CalculateBodyPartTagEfficiencyFactor(diffSet, BodyPartTagDefOf.Pelvis, float.MaxValue);
+            float SpineFactor = CalculateBodyPartTagEfficiencyFactor(diffSet, BodyPartTagDefOf.Spine, float.MaxValue);
+
+
+            //Log.Message($"ConsciousnessSourceFactor: {ConsciousnessSourceFactor}");
+
+            //Log.Message($"BreathingSourceFactor: {BreathingSourceFactor}");
+            //Log.Message($"BreathingPathwayFactor: {BreathingPathwayFactor}");
+            //Log.Message($"BreathingSourceCageFactor: {BreathingSourceCageFactor}");
+
+            //Log.Message($"BloodPumpingSourceFactor: {BloodPumpingSourceFactor}");
+
+            //Log.Message($"BloodFiltrationKidneyFactor: {BloodFiltrationKidneyFactor}");
+            //Log.Message($"BloodFiltrationLiverFactor: {BloodFiltrationLiverFactor}");
+            //Log.Message($"BloodFiltrationSourceFactor: {BloodFiltrationSourceFactor}");
+
+            //Log.Message($"MetabolismSourceFactor: {MetabolismSourceFactor}");
+
+            //Log.Message($"HearingSourceFactor: {HearingSourceFactor}");
+
+            //Log.Message($"SightSourceFactor: {SightSourceFactor}");
+
+            //Log.Message($"TalkingPathwayFactor: {TalkingPathwayFactor}");
+            //Log.Message($"TalkingSourceFactor: {TalkingSourceFactor}");
+            //Log.Message($"TongueFactor: {TongueFactor}");
+
+            //Log.Message($"EatingSourceFactor: {EatingSourceFactor}");
+            //Log.Message($"EatingPathwayFactor: {EatingPathwayFactor}");
+
+            //Log.Message($"ManipulationFactor: {ManipulationFactor}");
+
+            //Log.Message($"MovingFactor: {MovingFactor}");
+            //Log.Message($"PelvisFactor: {PelvisFactor}");
+            //Log.Message($"SpineFactor: {SpineFactor}");
 
             switch (def.defName)
             {
                 case "Consciousness":
-                    tags[BodyPartTagDefOf.ConsciousnessSource] = 1.0f;
+                    tags[BodyPartTagDefOf.ConsciousnessSource] = ConsciousnessSourceFactor;
+
+                    // side effects:
+                    tags[BodyPartTagDefOf.BloodPumpingSource] = BloodPumpingSourceFactor * 0.2f;
+
+                    tags[BodyPartTagDefOf.BreathingSource] = BreathingSourceFactor * 0.2f;
+                    tags[BodyPartTagDefOf.BreathingPathway] = BreathingPathwayFactor * 0.2f;
+                    tags[BodyPartTagDefOf.BreathingSourceCage] = BreathingSourceCageFactor * 0.2f;
+
+                    tags[BodyPartTagDefOf.BloodFiltrationKidney] = BloodFiltrationKidneyFactor * 0.1f;
+                    tags[BodyPartTagDefOf.BloodFiltrationLiver] = BloodFiltrationLiverFactor * 0.1f;
+                    tags[BodyPartTagDefOf.BloodFiltrationSource] = BloodFiltrationSourceFactor * 0.1f;
                     break;
 
                 case "Breathing":
-                    tags[BodyPartTagDefOf.BreathingSource] = 1.0f;
-                    tags[BodyPartTagDefOf.BreathingPathway] = 0.5f;
-                    tags[BodyPartTagDefOf.BreathingSourceCage] = 0.5f;
+                    tags[BodyPartTagDefOf.BreathingSource] = BreathingSourceFactor;
+                    tags[BodyPartTagDefOf.BreathingPathway] = BreathingPathwayFactor;
+                    tags[BodyPartTagDefOf.BreathingSourceCage] = BreathingSourceCageFactor;
                     break;
 
                 case "BloodPumping":
-                    tags[BodyPartTagDefOf.BloodPumpingSource] = 1.0f;
+                    tags[BodyPartTagDefOf.BloodPumpingSource] = BloodPumpingSourceFactor;
                     break;
 
                 case "BloodFiltration":
-                    tags[BodyPartTagDefOf.BloodFiltrationKidney] = 0.7f;
-                    tags[BodyPartTagDefOf.BloodFiltrationLiver] = 0.7f;
-                    tags[BodyPartTagDefOf.BloodFiltrationSource] = 1.0f; // fallback
+                    tags[BodyPartTagDefOf.BloodFiltrationKidney] = BloodFiltrationKidneyFactor;
+                    tags[BodyPartTagDefOf.BloodFiltrationLiver] = BloodFiltrationLiverFactor;
+                    tags[BodyPartTagDefOf.BloodFiltrationSource] = BloodFiltrationSourceFactor;
                     break;
 
                 case "Metabolism":
-                    tags[BodyPartTagDefOf.MetabolismSource] = 1.0f;
+                    tags[BodyPartTagDefOf.MetabolismSource] = MetabolismSourceFactor;
                     break;
 
                 case "Hearing":
-                    tags[BodyPartTagDefOf.HearingSource] = 0.75f;
+                    tags[BodyPartTagDefOf.HearingSource] = HearingSourceFactor;
                     break;
 
                 case "Sight":
-                    tags[BodyPartTagDefOf.SightSource] = PawnCapacityWorker_Sight.PartEfficiencySpecialWeight; // 0.75f
+                    tags[BodyPartTagDefOf.SightSource] = SightSourceFactor;
                     break;
 
                 case "Talking":
-                    tags[BodyPartTagDefOf.TalkingSource] = 1.0f;
-                    tags[BodyPartTagDefOf.TalkingPathway] = 0.5f;
-                    tags[BodyPartTagDefOf.Tongue] = 0.5f;
+                    tags[BodyPartTagDefOf.TalkingSource] = TalkingSourceFactor;
+                    tags[BodyPartTagDefOf.TalkingPathway] = TalkingPathwayFactor;
+                    tags[BodyPartTagDefOf.Tongue] = TongueFactor;
+
+                    // side effects:
+                    tags[BodyPartTagDefOf.ConsciousnessSource] = ConsciousnessSourceFactor;
                     break;
 
                 case "Eating":
-                    tags[BodyPartTagDefOf.EatingSource] = 1.0f;
-                    tags[BodyPartTagDefOf.EatingPathway] = 0.5f;
-                    tags[BodyPartTagDefOf.Tongue] = 0.5f;
+                    tags[BodyPartTagDefOf.EatingSource] = EatingSourceFactor;
+                    tags[BodyPartTagDefOf.EatingPathway] = EatingPathwayFactor;
+                    tags[BodyPartTagDefOf.Tongue] = TongueFactor * 0.5f;
+
+                    // side effects:
+                    tags[BodyPartTagDefOf.ConsciousnessSource] = ConsciousnessSourceFactor;
                     break;
 
                 case "Manipulation":
-                    tags[BodyPartTagDefOf.ManipulationLimbCore] = 1.0f;
-                    tags[BodyPartTagDefOf.ManipulationLimbSegment] = 0.8f;
-                    tags[BodyPartTagDefOf.ManipulationLimbDigit] = 0.5f;
+                    tags[BodyPartTagDefOf.ManipulationLimbCore] = ManipulationFactor;
+                    tags[BodyPartTagDefOf.ManipulationLimbSegment] = ManipulationFactor;
+                    tags[BodyPartTagDefOf.ManipulationLimbDigit] = ManipulationFactor * 0.8f;
+                     
+                    // side effects:
+                    tags[BodyPartTagDefOf.ConsciousnessSource] = ConsciousnessSourceFactor;
                     break;
 
                 case "Moving":
-                    tags[BodyPartTagDefOf.MovingLimbCore] = 1.0f;
-                    tags[BodyPartTagDefOf.MovingLimbSegment] = 0.8f;
-                    tags[BodyPartTagDefOf.MovingLimbDigit] = 0.4f;
-                    tags[BodyPartTagDefOf.Pelvis] = 0.5f;
-                    tags[BodyPartTagDefOf.Spine] = 0.5f;
+                    tags[BodyPartTagDefOf.MovingLimbCore] = MovingFactor;
+                    tags[BodyPartTagDefOf.MovingLimbSegment] = MovingFactor;
+                    tags[BodyPartTagDefOf.MovingLimbDigit] = MovingFactor * 0.4f;
+                    tags[BodyPartTagDefOf.Pelvis] = PelvisFactor;
+                    tags[BodyPartTagDefOf.Spine] = SpineFactor;
+
+                    // side effects:
+                    tags[BodyPartTagDefOf.BloodPumpingSource] = BloodPumpingSourceFactor * 0.2f;
+
+                    tags[BodyPartTagDefOf.BreathingSource] = BreathingSourceFactor * 0.2f;
+                    tags[BodyPartTagDefOf.BreathingPathway] = BreathingPathwayFactor * 0.2f;
+                    tags[BodyPartTagDefOf.BreathingSourceCage] = BreathingSourceCageFactor * 0.2f;
+
+                    tags[BodyPartTagDefOf.ConsciousnessSource] = ConsciousnessSourceFactor;
                     break;
             }
 
             return tags;
+        }
+        public static float CalculateBodyPartTagEfficiencyFactor(HediffSet diffSet, BodyPartTagDef tag, float maximum, float bestPartEfficiencySpecialWeight = -1f)
+        {
+            float factor = PawnCapacityUtility.CalculateTagEfficiency(diffSet, tag, maximum, default(FloatRange), null, bestPartEfficiencySpecialWeight);
+            if (factor > 1f)
+                factor = 1f;
+
+            factor = 1f - factor;
+
+            return factor;
         }
 
     }
