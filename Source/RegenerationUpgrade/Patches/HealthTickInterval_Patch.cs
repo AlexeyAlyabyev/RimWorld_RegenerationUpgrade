@@ -12,6 +12,9 @@ namespace RegenerationUpgrade.Patches
     [HarmonyPatch(typeof(Pawn_HealthTracker), "HealthTickInterval")]
     public static class HealthTickInterval_Patch
     {
+        // 🔽 КЭШ ДЛЯ GetTagsUsedByCapacityWithWeights
+        public static Dictionary<PawnCapacityDef, Dictionary<BodyPartTagDef, float>> capacityTagWeightsCache = new Dictionary<PawnCapacityDef, Dictionary<BodyPartTagDef, float>>();
+
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
             var codes = new List<CodeInstruction>(instructions);
@@ -45,6 +48,7 @@ namespace RegenerationUpgrade.Patches
                 return null;
 
             Pawn pawn = injuries[0].pawn;
+            capacityTagWeightsCache = new Dictionary<PawnCapacityDef, Dictionary<BodyPartTagDef, float>>();
 
             // Если у пешки есть кровотечение, в первую очередь лечим его
             if (pawn.health.CanBleed && pawn.health.hediffSet.BleedRateTotal >= 0.1f)
@@ -71,22 +75,45 @@ namespace RegenerationUpgrade.Patches
             if (lifeThreatingCapacityInjury != null)
                 return lifeThreatingCapacityInjury;
 
-
             // Восстанавливаем части тела, которые могут привести к смерти при дальнейших повреждениях до 30%
-            Hediff_Injury closestToDeathInjury = GetClosestToDeathPartOfTheBody(pawn, injuries);
+            Hediff_Injury closestToDeathInjury = GetClosestToDeathPartOfTheBody(pawn, injuries, 0.3f);
+            if (closestToDeathInjury != null)
+                return closestToDeathInjury;
+
+
+            // Первоочередно после кровотечения и фильтрации крови лечим Кровообращение, Дыхание или Сознание до минимально безопасных значений в 50%
+            lifeThreatingCapacityInjury = GetMostDangerousLifeThreatingCapacityInjury(pawn, injuries, 0.5f);
+            if (lifeThreatingCapacityInjury != null)
+                return lifeThreatingCapacityInjury;
+
+            // Восстанавливаем части тела, которые могут привести к смерти при дальнейших повреждениях до 50%
+            closestToDeathInjury = GetClosestToDeathPartOfTheBody(pawn, injuries, 0.5f);
             if (closestToDeathInjury != null)
                 return closestToDeathInjury;
 
 
             // Добавить проверку боли
 
-
             // Восстанавливаем способность ходить (до минимального значениядо 16%)
             Hediff_Injury injuryThatPreventsWalking = GetWorstCapacityInjuryToHeal(pawn, injuries, PawnCapacityDefOf.Moving, 0.16f);
             if (injuryThatPreventsWalking != null)
                 return injuryThatPreventsWalking;
 
+            // Восстанавливаем способность взаимодействия с предметами (до минимального значениядо 1%)
+            Hediff_Injury injuryThatPreventsManipulation = GetWorstCapacityInjuryToHeal(pawn, injuries, PawnCapacityDefOf.Manipulation, 0.01f);
+            if (injuryThatPreventsManipulation != null)
+                return injuryThatPreventsManipulation;
 
+
+            // Лечим травмы жизненной важных параметров до максимума
+            lifeThreatingCapacityInjury = GetMostDangerousLifeThreatingCapacityInjury(pawn, injuries);
+            if (lifeThreatingCapacityInjury != null)
+                return lifeThreatingCapacityInjury;
+
+            // Лечим травмы важных частей тела до максимума
+            closestToDeathInjury = GetClosestToDeathPartOfTheBody(pawn, injuries);
+            if (closestToDeathInjury != null)
+                return closestToDeathInjury;
 
 
             MostImpactfulInjuryOnCapacity(pawn, injuries, PawnCapacityDefOf.Manipulation); // Работа (До 25%?)
@@ -281,20 +308,18 @@ namespace RegenerationUpgrade.Patches
         // ---------------------- БЛОК С ЖИЗНЕННО ВАЖНЫМИ ЧАСТЯМИ ТЕЛА ---------------------------
 
         // Получить самую тяжелую травму, которая находится на части тела, от которой зависит жизнь пешки
-        public static Hediff_Injury GetClosestToDeathPartOfTheBody(Pawn pawn, IList<Hediff_Injury> injuries)
+        public static Hediff_Injury GetClosestToDeathPartOfTheBody(Pawn pawn, IList<Hediff_Injury> injuries, float levelToCure = 1f)
         {
-            //float partDeathFactor = 0f;
+            float partDeathFactor = 0f;
             Hediff_Injury closestToDeathInjury = null;
 
             List<PawnCapacityDef> allDefsListForReading = DefDatabase<PawnCapacityDef>.AllDefsListForReading;
             PawnCapacitiesHandler capacities = new PawnCapacitiesHandler(pawn);
 
-            //Log.Message($"PAWN {pawn.LabelShort} ");
             List<PawnCapacityDef> vitalCapacitiesList = new List<PawnCapacityDef>();
             for (int i = 0; i < allDefsListForReading.Count; i++)
             {
                 PawnCapacityDef pawnCapacityDef = allDefsListForReading[i];
-                //Log.Message($"{i + 1}. {allDefsListForReading[i].defName} ({allDefsListForReading[i].label}), isLethal {(pawn.RaceProps.IsFlesh ? pawnCapacityDef.lethalFlesh : pawnCapacityDef.lethalMechanoids)}");
                 // Если для текущего вида пешки параметр смертельно важен, делаем для него расчет
                 if (pawn.RaceProps.IsFlesh ? pawnCapacityDef.lethalFlesh : pawnCapacityDef.lethalMechanoids)
                 {
@@ -302,20 +327,19 @@ namespace RegenerationUpgrade.Patches
                 }
             }
             Log.Message("============ Vital body part capacities for " + pawn.LabelShort + " ============");
-            //for (int i = 0; i < vitalCapacitiesList.Count; i++)
-            //{
-            //    Log.Message($"{i + 1}. {vitalCapacitiesList[i].defName} ({vitalCapacitiesList[i].label})");
-            //}
+
             foreach (var injury in injuries)
             {
                 var part = injury.Part;
-                //Log.Message($"Part {part.LabelShort}, PartIsMissing: {pawn.health.hediffSet.PartIsMissing(part)} ");
                 if (part == null || pawn.health.hediffSet.PartIsMissing(part))
                     continue;
 
                 float partMaxHp = part.def.GetMaxHealth(pawn);
-                //Log.Message($"partMaxHp {partMaxHp}");
+                float currentHP = pawn.health.hediffSet.GetPartHealth(part);
                 if (partMaxHp <= 0f)
+                    continue;
+
+                if (levelToCure > currentHP / partMaxHp)
                     continue;
 
                 float damageFactor = partMaxHp / injury.Severity;
@@ -323,69 +347,87 @@ namespace RegenerationUpgrade.Patches
 
                 foreach (var vitalCapacity in vitalCapacitiesList)
                 {
+                    //Log.Message($"==== Влияние ОСНОВНОЙ ЧАСТИ {part.LabelCap} на {vitalCapacity.defName} ====");
                     capacityImpactWeight += BodyPartAffectsCapacity(vitalCapacity, part, pawn.health.hediffSet);
-                    //if (BodyPartAffectsCapacity(vitalCapacity, part))
-                    //{
-                    //    Log.Message($"{part.LabelCap} влияет на {vitalCapacity.LabelCap}.");
-                    //}
+                }
 
-                    //var worker = vitalCapacity.Worker;
-                    //var directImpact = vitalCapacity.bodyPartGroups?.Any(g => part.groups.Contains(g)) == true;
-                    //if (directImpact)
-                    //{
-                    //    totalImpactWeight += 1.0f;
-                    //    continue;
-                    //}
+                if (capacityImpactWeight > partDeathFactor)
+                {
+                    partDeathFactor = capacityImpactWeight;
+                    closestToDeathInjury = injury;
                 }
 
                 Log.Message($"Вес влияния {part.LabelCap} на все жизненно важные параметры: {capacityImpactWeight}");
             }
 
+            if (closestToDeathInjury != null)
+                Log.Message($"-- Самая опасная травма '{closestToDeathInjury.Label}' на '{closestToDeathInjury.Part?.Label ?? "null"}'");
             return closestToDeathInjury;
         }
 
         public static float BodyPartAffectsCapacity(PawnCapacityDef capacityDef, BodyPartRecord part, HediffSet diffSet)
         {
-            var dict = GetTagsUsedByCapacityWithWeights(capacityDef, diffSet);
             float partCapacityFactor = 0f;
+            float weightMultiplier = 1f;
+            //if (part.def.tags == null || part.def.tags.Count == 0)
+            //    return partCapacityFactor;
 
-            // Логируем все теги, если включена разработка или диагностика
-            //Log.Message($"Проверка части '{part.LabelCap}' на влияние на способность '{capacityDef.defName}'");
+            if (!capacityTagWeightsCache.TryGetValue(capacityDef, out var dict))
+            {
+                dict = GetTagsUsedByCapacityWithWeights(capacityDef, diffSet);
+                capacityTagWeightsCache[capacityDef] = dict;
+            }
+            if (dict == null || dict.Count == 0)
+                return partCapacityFactor;
 
+
+            //foreach (var partTag in part.def.tags)
+            //{
+            //    partCapacityFactor += dict.TryGetValue(partTag, out float weight) ? weight : 0f;
+            //}
+
+            //return partCapacityFactor
+
+            // Если часть тела не имеет прямых тегов, ее вес зависит от степени поврежденности (т.к. учитываются теги вложенных частей)
             if (part.def.tags == null || part.def.tags.Count == 0)
             {
-                //Log.Message("  У части тела нет тегов (part.def.tags == null или пусто).");
-                return partCapacityFactor;
+                float partMaxHp = part.def.GetMaxHealth(diffSet.pawn);
+                float currentHP = diffSet.GetPartHealth(part);
+                weightMultiplier = 1 - (currentHP / partMaxHp);
             }
 
-            if (dict == null || dict.Count == 0)
+            return CalculateTagWeightRecursive(part, diffSet, dict, weightMultiplier);
+        }
+
+        private static float CalculateTagWeightRecursive(BodyPartRecord part, HediffSet diffSet, Dictionary<BodyPartTagDef, float> tagWeights, float weightMultiplier)
+        {
+            float partCapacityFactor = 0f;
+
+            if (part.def?.tags != null && !diffSet.PartIsMissing(part))
             {
-                //Log.Message("  Способность не использует BodyPartTagDef (tags == null или пусто).");
-                return partCapacityFactor;
+                foreach (var tag in part.def.tags)
+                {
+                    if (tagWeights.TryGetValue(tag, out float baseWeight))
+                    {
+                        partCapacityFactor += baseWeight * weightMultiplier;
+                        //Log.Message($"Влияние {part.LabelCap}: {baseWeight * weightMultiplier}");
+                    }
+                }
             }
 
-            foreach (var partTag in part.def.tags)
+            foreach (var child in part.parts)
             {
-                partCapacityFactor += dict.TryGetValue(partTag, out float weight) ? weight : 0f;
-            }
+                float partMaxHp = child.def.GetMaxHealth(diffSet.pawn);
+                float currentHP = diffSet.GetPartHealth(child);
+                float childPartMultiplier = 1 - (currentHP / partMaxHp);
 
-            //if (partCapacityFactor > 0f)
-            //    Log.Message($"'{part.LabelCap}', влияние на способность '{capacityDef.defName}': {partCapacityFactor}");
+                partCapacityFactor += CalculateTagWeightRecursive(child, diffSet, tagWeights, weightMultiplier * childPartMultiplier);
+                //Log.Message($"Дочернаяя часть {part.LabelCap} --- {child.LabelCap}");
+            }
 
             return partCapacityFactor;
-
-            //// Логируем теги, используемые способностью
-            //Log.Message($"  Теги, используемые способностью: [{string.Join(", ", tags.Select(t => t.defName))}]");
-
-            //// Логируем теги части тела
-            //Log.Message($"  Теги части тела: [{string.Join(", ", part.def.tags.Select(t => t.defName))}]");
-
-            //// Пересечение
-            //var matchingTags = part.def.tags.Where(tag => tags.Contains(tag)).ToList();
-            //Log.Message($"  Совпадающие теги: [{string.Join(", ", matchingTags.Select(t => t.defName))}]");
-
-            //return matchingTags.Count > 0;
         }
+
 
         public static Dictionary<BodyPartTagDef, float> GetTagsUsedByCapacityWithWeights(PawnCapacityDef def, HediffSet diffSet)
         {
