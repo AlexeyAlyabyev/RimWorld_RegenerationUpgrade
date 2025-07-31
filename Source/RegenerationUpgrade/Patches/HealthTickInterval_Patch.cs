@@ -18,6 +18,12 @@ namespace RegenerationUpgrade.Patches
         {
             var codes = new List<CodeInstruction>(instructions);
 
+            var getHediffsMethod = AccessTools.Method(typeof(HediffSet), "GetHediffs")
+                .MakeGenericMethod(typeof(Hediff_Injury));
+            FieldInfo tmpHediffField = AccessTools.Field(typeof(Pawn_HealthTracker), "tmpHediffInjuries");
+
+            var sortMethod = AccessTools.Method(typeof(HealthTickInterval_Patch), nameof(SortHediffList));
+
             // Получаем generic-метод RandomElement<T>(this IList<T>)
             var randomElementMethod = typeof(GenCollection)
                 .GetMethods(BindingFlags.Public | BindingFlags.Static)
@@ -30,8 +36,28 @@ namespace RegenerationUpgrade.Patches
             // Наш кастомный метод
             var customMethod = AccessTools.Method(typeof(HealthTickInterval_Patch), nameof(GetMostDangerousInjury));
 
+            int getHediffsCallCount = 0;
+
             for (int i = 0; i < codes.Count; i++)
             {
+                // Найти вызов GetHediffs<>() — и вставить сортировку сразу после
+                if (codes[i].opcode == OpCodes.Callvirt && codes[i].operand is MethodInfo mi && mi == getHediffsMethod)
+                {
+                    getHediffsCallCount++;
+
+                    if (getHediffsCallCount == 3)
+                    {
+                        // Вставка вызова сортировки после GetHediffs
+                        codes.InsertRange(i + 1, new[]
+                        {
+                            new CodeInstruction(OpCodes.Ldarg_0),                         // this
+                            new CodeInstruction(OpCodes.Ldfld, tmpHediffField),          // this.tmpHediffInjuries
+                            new CodeInstruction(OpCodes.Call, sortMethod)                // SortByDanger(tmpHediffInjuries)
+                        });
+                    }
+                }
+
+                // Заменяем RandomElement<T>()
                 if (codes[i].Calls(randomElementMethod))
                 {
                     codes[i] = new CodeInstruction(OpCodes.Call, customMethod);
@@ -39,6 +65,28 @@ namespace RegenerationUpgrade.Patches
             }
 
             return codes;
+        }
+
+        public static void SortHediffList(List<Hediff_Injury> injuries)
+        {
+            if (injuries == null || injuries.Count <= 1)
+                return;
+
+            var remaining = new HashSet<Hediff_Injury>(injuries);
+            injuries.Clear();
+
+            while (remaining.Count > 0)
+            {
+                Hediff_Injury mostImportantInjury = GetMostDangerousInjury(remaining);
+                if (mostImportantInjury == null)
+                    break;
+
+                injuries.Add(mostImportantInjury);
+                remaining.Remove(mostImportantInjury);
+            }
+
+            // Добавляем оставшиеся элементы
+            injuries.AddRange(remaining);
         }
 
         // Получить список летальных параметров для пешки
@@ -59,12 +107,12 @@ namespace RegenerationUpgrade.Patches
             }
         }
 
-        public static Hediff_Injury GetMostDangerousInjury(IList<Hediff_Injury> injuries)
+        public static Hediff_Injury GetMostDangerousInjury(IEnumerable<Hediff_Injury> injuries)
         {
-            if (injuries == null || injuries.Count == 0)
+            if (injuries == null || !injuries.Any())
                 return null;
 
-            Pawn pawn = injuries[0].pawn;
+            Pawn pawn = injuries.First().pawn;
             SetPawnLethalCapacities(pawn);
             var capacityTagWeightsCache = new Dictionary<PawnCapacityDef, Dictionary<BodyPartTagDef, float>>();
             var capacityValueCache = new Dictionary<PawnCapacityDef, float>();
@@ -131,8 +179,8 @@ namespace RegenerationUpgrade.Patches
         }
 
         public static Hediff_Injury GetDangerousInjuryToRecoverInInterval(
-            Pawn pawn, 
-            IList<Hediff_Injury> injuries, 
+            Pawn pawn,
+            IEnumerable<Hediff_Injury> injuries, 
             Dictionary<PawnCapacityDef, Dictionary<BodyPartTagDef, float>> capacityTagWeightsCache,
             Dictionary<PawnCapacityDef, float> capacityValueCache,
             float min = 0.01f, 
@@ -175,7 +223,7 @@ namespace RegenerationUpgrade.Patches
 
         // ---------------------- БЛОК С КРОВОТЕЧЕНИЕМ ---------------------------
         // Найти самую кровоточащую травму
-        private static Hediff_Injury FindMostBleedingHediff(IList<Hediff_Injury> injuries)
+        private static Hediff_Injury FindMostBleedingHediff(IEnumerable<Hediff_Injury> injuries)
         {
             float num = 0f;
             Hediff_Injury hediff = null;
@@ -263,8 +311,8 @@ namespace RegenerationUpgrade.Patches
         // ---------------------- БЛОК ЖИЗНЕННО ВАЖНЫХ ПАРАМЕТРОВ ПЕШЕК ---------------------------
         // Получить травму, которая сильнее всего сафектила жизненно важные параметры пешки. Чтобы вылечить ее до уровня levelToCure
         public static Hediff_Injury GetMostDangerousLifeThreatingCapacityInjury(
-            Pawn pawn, 
-            IList<Hediff_Injury> injuries,
+            Pawn pawn,
+            IEnumerable<Hediff_Injury> injuries,
             Dictionary<PawnCapacityDef, float> capacityValueCache,
             float levelToCure = 1f
         )
@@ -293,8 +341,8 @@ namespace RegenerationUpgrade.Patches
 
         // Получить самую сиьную травму, которая влияет на параметр (pawnCapacity), чтобы поднять уровень параметра до значения levelToCure
         public static Hediff_Injury GetWorstCapacityInjuryToHeal(
-            Pawn pawn, 
-            IList<Hediff_Injury> injuries, 
+            Pawn pawn,
+            IEnumerable<Hediff_Injury> injuries, 
             PawnCapacityDef pawnCapacity,
             Dictionary<PawnCapacityDef, float> capacityValueCache,
             float levelToCure = 1f
@@ -320,8 +368,8 @@ namespace RegenerationUpgrade.Patches
 
         // Получить травму которая больше всего влияет на параметр пешки
         public static Hediff_Injury MostImpactfulInjuryOnCapacity(
-            Pawn pawn, 
-            IList<Hediff_Injury> injuries, 
+            Pawn pawn,
+            IEnumerable<Hediff_Injury> injuries, 
             PawnCapacityDef capacity,
             Dictionary<PawnCapacityDef, float> capacityValueCache
         )
@@ -363,8 +411,8 @@ namespace RegenerationUpgrade.Patches
         // ---------------------- БЛОК С ЖИЗНЕННО ВАЖНЫМИ ЧАСТЯМИ ТЕЛА ---------------------------
         // Получить самую тяжелую травму, которая находится на части тела, от которой зависит жизнь пешки
         public static Hediff_Injury GetClosestToDeathPartOfTheBody(
-            Pawn pawn, 
-            IList<Hediff_Injury> injuries,
+            Pawn pawn,
+            IEnumerable<Hediff_Injury> injuries,
             Dictionary<PawnCapacityDef, Dictionary<BodyPartTagDef, float>> capacityTagWeightsCache,
             float levelToCure = 1f)
         {
@@ -412,7 +460,7 @@ namespace RegenerationUpgrade.Patches
         }
 
         // Получить список поврежденных частей тела по списку всех повреждений
-        public static List<BodyPartRecord> GetPartsByInjuries(IList<Hediff_Injury> injuries)
+        public static List<BodyPartRecord> GetPartsByInjuries(IEnumerable<Hediff_Injury> injuries)
         {
             List<BodyPartRecord> injuredParts = new List<BodyPartRecord>();
             foreach (Hediff_Injury injury in injuries)
@@ -426,7 +474,7 @@ namespace RegenerationUpgrade.Patches
         }
 
         // Получить самую сильную травму части тела из переданных травм
-        public static Hediff_Injury GetWorstInjuryOfPart(Pawn pawn, BodyPartRecord part, IList<Hediff_Injury> injuries)
+        public static Hediff_Injury GetWorstInjuryOfPart(Pawn pawn, BodyPartRecord part, IEnumerable<Hediff_Injury> injuries)
         {
             return injuries
                 .Where(injury => injury.Part == part)
