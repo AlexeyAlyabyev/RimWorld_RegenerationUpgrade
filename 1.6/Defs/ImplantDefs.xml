@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+    <!-- Healing Priority Implant -->
+    <HediffDef ParentName="ImplantHediffBase">
+        <defName>RegenerationUpgrade_HealingPriorityImplant</defName>
+        <label>healing module</label>
+        <labelNoun>a healing module</labelNoun>
+        <description>A nanite healing implant that improves medical prioritization logic.</description>
+        <descriptionHyperlinks><ThingDef>RegenerationUpgrade_HealingPriorityImplant</ThingDef></descriptionHyperlinks>
+        <spawnThingOnRemoved>RegenerationUpgrade_HealingPriorityImplant</spawnThingOnRemoved>
+    </HediffDef>
+
+    
+    <ThingDef ParentName="BodyPartBionicBase">
+        <defName>RegenerationUpgrade_HealingPriorityImplant</defName>
+        <label>healing module</label>
+        <description>A nanite healing implant that improves medical prioritization logic.</description>
+        <descriptionHyperlinks><RecipeDef>RegenerationUpgrade_InstallHealingPriorityImplant</RecipeDef></descriptionHyperlinks>
+        <statBases>
+            <MarketValue>800</MarketValue>
+        </statBases>
+        <costList>
+          <Plasteel>20</Plasteel>
+          <ComponentSpacer>4</ComponentSpacer>
+        </costList>
+    </ThingDef>
+
+    <RecipeDef ParentName="SurgeryInstallImplantBase">
+        <defName>RegenerationUpgrade_InstallHealingPriorityImplant</defName>
+        <label>install healing module</label>
+        <description>Installs a healing module that improves automatic treatment behavior.</description>
+        <descriptionHyperlinks>
+          <ThingDef>RegenerationUpgrade_HealingPriorityImplant</ThingDef>
+          <HediffDef>RegenerationUpgrade_HealingPriorityImplant</HediffDef>
+        </descriptionHyperlinks>
+        <jobString>Install healing module.</jobString>
+        <ingredients>
+            <li>
+                <filter>
+                <thingDefs>
+                    <li>RegenerationUpgrade_HealingPriorityImplant</li>
+                </thingDefs>
+                </filter>
+                <count>1</count>
+            </li>
+        </ingredients>
+        <fixedIngredientFilter>
+            <thingDefs>
+                <li>RegenerationUpgrade_HealingPriorityImplant</li>
+            </thingDefs>
+        </fixedIngredientFilter>
+        <appliedOnFixedBodyParts>
+            <li>Torso</li>
+        </appliedOnFixedBodyParts>
+        <addsHediff>RegenerationUpgrade_HealingPriorityImplant</addsHediff>
+    </RecipeDef>   
+</Defs>

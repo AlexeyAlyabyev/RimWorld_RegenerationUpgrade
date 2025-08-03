@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+    <GeneDef>
+        <defName>RegenerationUpgrade_HealingPriorityGene</defName>
+        <label>accelerated regeneration</label>
+        <description>This gene enables enhanced prioritization of wound healing.</description>
+        <geneClass>Gene</geneClass>
+        <displayCategory>Healing</displayCategory>
+        <biostatCpx>1</biostatCpx>
+        <biostatMet>-1</biostatMet>
+        <iconPath>UI/Icons/Genes/Gene_WoundHealingRateFast</iconPath>
+      </GeneDef>
+</Defs>
