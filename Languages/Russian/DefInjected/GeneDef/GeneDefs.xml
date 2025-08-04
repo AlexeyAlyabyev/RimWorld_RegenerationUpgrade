@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<LanguageData>
+    <RU_HealingPriorityGene.label>Стремление выжить</RU_HealingPriorityGene.label>
+    <RU_HealingPriorityGene.description>Заставляет организм в первую очередь лечить опасные для жизни травмы.</RU_HealingPriorityGene.description>
+</LanguageData>

@@ -58,8 +58,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Patches\CompPostTickInterval_Patch.cs" />
-    <Compile Include="Patches\CompTickInterval_Patch.cs" />
+    <Compile Include="VEFPatches\CompPostTickInterval_Patch.cs" />
+    <Compile Include="VEFPatches\CompTickInterval_Patch.cs" />
     <Compile Include="Patches\HealthTickInterval_Patch.cs" />
     <Compile Include="Patches\HediffGiver_Bleeding_Patch.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

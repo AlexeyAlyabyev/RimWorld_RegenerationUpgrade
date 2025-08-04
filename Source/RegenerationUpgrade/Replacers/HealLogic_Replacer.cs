@@ -25,9 +25,9 @@ namespace RegenerationUpgrade.Replacers
         private static bool HasHealingUpgrade(Pawn pawn)
         {
             // Проверка на ген
-            return pawn.genes?.HasActiveGene(DefDatabase<GeneDef>.GetNamed("RegenerationUpgrade_HealingPriorityGene")) == true
+            return pawn.genes?.HasActiveGene(DefDatabase<GeneDef>.GetNamed("RU_HealingPriorityGene")) == true
                 // или на имплант
-                || pawn.health?.hediffSet?.hediffs?.Any(h => h.def == HediffDef.Named("RegenerationUpgrade_HealingPriorityImplant")) == true;
+                || pawn.health?.hediffSet?.hediffs?.Any(h => h.def == HediffDef.Named("RU_HealingPriorityImplant")) == true;
         }
 
         public static void SortHediffList(List<Hediff_Injury> injuries)
@@ -122,7 +122,7 @@ namespace RegenerationUpgrade.Replacers
             if (!HasHealingUpgrade(pawn))
                 return injuries.RandomElement();
 
-            Log.Message($"PAWN {pawn.LabelShort} ");
+            //Log.Message($"PAWN {pawn.LabelShort} ");
             SetPawnLethalCapacities(pawn);
             capacityValueCache = new Dictionary<PawnCapacityDef, float>();
             SetPawnCapacitiesCache(pawn);

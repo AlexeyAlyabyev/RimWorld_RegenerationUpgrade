@@ -8,13 +8,13 @@ using System.Reflection.Emit;
 using VEF.AnimalBehaviours;
 using Verse;
 
-namespace RegenerationUpgrade.Patches
+namespace RegenerationUpgrade.VEFPatches
 {
-    [HarmonyPatch(typeof(CompRegeneration), "CompTickInterval")]
-    public static class CompTickInterval_Patch
+    [HarmonyPatch(typeof(HediffComp_Regeneration), "CompPostTickInterval")]
+    public static class CompPostTickInterval_Patch
     {
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-        {
+        {            
             var codes = new List<CodeInstruction>(instructions);
 
             // Получаем generic-метод RandomElement<T>(this IList<T>)
@@ -35,7 +35,7 @@ namespace RegenerationUpgrade.Patches
                 if (codes[i].Calls(randomElementMethod))
                 {
                     codes[i] = new CodeInstruction(OpCodes.Call, customMethod);
-                    Log.Message($"Произогшла замена метода");
+                    //Log.Message($"Произогшла замена метода");
                 }
             }
 
