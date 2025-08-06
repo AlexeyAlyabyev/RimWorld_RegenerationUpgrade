@@ -1,18 +1,29 @@
 ﻿using HarmonyLib;
+using RegenerationUpgrade.Patches;
 using RegenerationUpgrade.Replacers;
 using RimWorld;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using VEF.AnimalBehaviours;
 using Verse;
 
 namespace RegenerationUpgrade.VEFPatches
 {
-    [HarmonyPatch(typeof(HediffComp_Regeneration), "CompPostTickInterval")]
+    //[HarmonyPatch(typeof(HediffComp_Regeneration), "CompPostTickInterval")]
     public static class CompPostTickInterval_Patch
     {
+        public static void ApplyPatch(Harmony harmony)
+        {
+            var type = AccessTools.TypeByName("VEF.AnimalBehaviours.HediffComp_Regeneration")
+                    ?? AccessTools.TypeByName("AnimalBehaviours.HediffComp_Regeneration");
+
+            var method = AccessTools.Method(type, "CompPostTickInterval")
+                    ?? AccessTools.Method(type, "CompPostTick");
+
+            var transpiler = typeof(CompPostTickInterval_Patch).GetMethod(nameof(Transpiler), BindingFlags.Static | BindingFlags.NonPublic);
+            harmony.Patch(method, transpiler: new HarmonyMethod(transpiler));
+        }
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {            
             var codes = new List<CodeInstruction>(instructions);
@@ -35,7 +46,7 @@ namespace RegenerationUpgrade.VEFPatches
                 if (codes[i].Calls(randomElementMethod))
                 {
                     codes[i] = new CodeInstruction(OpCodes.Call, customMethod);
-                    //Log.Message($"Произогшла замена метода");
+                    Log.Message($"Произогшла замена метода в CompPostTick");
                 }
             }
 

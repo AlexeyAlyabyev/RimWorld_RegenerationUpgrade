@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+    <!-- Healing Priority Implant -->
+    <HediffDef ParentName="ImplantHediffBase">
+        <defName>RU_HealingPriorityImplant</defName>
+        <label>Healing prioritization system</label>
+        <labelNoun>a healing module</labelNoun>
+        <description>It implements nanomachines that scan the body, assess the severity of damage, and prioritize regeneration, starting with the most critical injuries.</description>
+        <descriptionHyperlinks><ThingDef>RU_HealingPriorityImplant</ThingDef></descriptionHyperlinks>
+        <spawnThingOnRemoved>RU_HealingPriorityImplant</spawnThingOnRemoved>
+    </HediffDef>
+
+    
+    <ThingDef ParentName="BodyPartBionicBase">
+        <defName>RU_HealingPriorityImplant</defName>
+        <label>Healing prioritization system</label>
+        <description>It implements nanomachines that scan the body, assess the severity of damage, and prioritize regeneration, starting with the most critical injuries.</description>
+        <descriptionHyperlinks><RecipeDef>RU_InstallHealingPriorityImplant</RecipeDef></descriptionHyperlinks>
+        <statBases>
+            <MarketValue>800</MarketValue>
+        </statBases>
+        <costList>
+          <Plasteel>15</Plasteel>
+          <ComponentSpacer>4</ComponentSpacer>
+        </costList>
+		<thingSetMakerTags>
+			<li>RewardStandardLowFreq</li>
+		</thingSetMakerTags>
+    </ThingDef>
+
+    <RecipeDef ParentName="SurgeryInstallImplantBase">
+        <defName>RU_InstallHealingPriorityImplant</defName>
+        <label>Install healing prioritization system</label>
+        <description>Install healing prioritization system.</description>
+        <descriptionHyperlinks>
+          <ThingDef>RU_HealingPriorityImplant</ThingDef>
+          <HediffDef>RU_HealingPriorityImplant</HediffDef>
+        </descriptionHyperlinks>
+        <jobString>Install healing module.</jobString>
+        <ingredients>
+            <li>
+                <filter>
+                <thingDefs>
+                    <li>RU_HealingPriorityImplant</li>
+                </thingDefs>
+                </filter>
+                <count>1</count>
+            </li>
+        </ingredients>
+        <fixedIngredientFilter>
+            <thingDefs>
+                <li>RU_HealingPriorityImplant</li>
+            </thingDefs>
+        </fixedIngredientFilter>
+        <appliedOnFixedBodyParts>
+            <li>Torso</li>
+        </appliedOnFixedBodyParts>
+        <addsHediff>RU_HealingPriorityImplant</addsHediff>
+        <uiIconThing>RU_HealingPriorityImplant</uiIconThing>
+    </RecipeDef>   
+</Defs>

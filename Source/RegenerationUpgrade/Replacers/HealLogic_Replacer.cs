@@ -21,13 +21,34 @@ namespace RegenerationUpgrade.Replacers
 
         public static Dictionary<PawnCapacityDef, float> capacityValueCache;
 
+        private static readonly Dictionary<Pawn, Hediff_Injury> lastDangerousInjuryByPawn = new Dictionary<Pawn, Hediff_Injury>();
+
         // Имеет ли пешка оптимизатор регенерации для применения патча
         private static bool HasHealingUpgrade(Pawn pawn)
         {
             // Проверка на ген
-            return pawn.genes?.HasActiveGene(DefDatabase<GeneDef>.GetNamed("RU_HealingPriorityGene")) == true
+            return HasActiveGene(pawn, DefDatabase<GeneDef>.GetNamed("RU_HealingPriorityGene")) == true
                 // или на имплант
                 || pawn.health?.hediffSet?.hediffs?.Any(h => h.def == HediffDef.Named("RU_HealingPriorityImplant")) == true;
+        }
+
+        public static bool HasActiveGene(Pawn pawn, GeneDef geneDef)
+        {
+            if (pawn?.genes == null || geneDef == null)
+            {
+                return false;
+            }
+
+            List<Gene> genesListForReading = pawn.genes.GenesListForReading;
+            for (int i = 0; i < genesListForReading.Count; i++)
+            {
+                if (genesListForReading[i].def == geneDef && genesListForReading[i].Active)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public static void SortHediffList(List<Hediff_Injury> injuries)
@@ -59,6 +80,37 @@ namespace RegenerationUpgrade.Replacers
                 if (regenAmount <= 0f)
                     break;
             }
+
+            // Добавляем оставшиеся элементы
+            injuries.AddRange(remaining);
+        }
+
+        public static void SortHediffListVEF(List<Hediff_Injury> injuries)
+        {
+            if (injuries == null || injuries.Count <= 1)
+                return;
+
+            Pawn pawn = injuries.First().pawn;
+            if (!HasHealingUpgrade(pawn))
+                return;
+
+            // Уже отсортировано, можно пропустить
+            if (lastDangerousInjuryByPawn.TryGetValue(pawn, out var previous) && previous == injuries[0])
+            {
+                return;
+            }
+
+            Hediff_Injury mostImportantInjury = GetMostDangerousInjury(injuries);
+            if (mostImportantInjury == null)
+                return;
+
+            lastDangerousInjuryByPawn[pawn] = mostImportantInjury;
+
+            var remaining = new HashSet<Hediff_Injury>(injuries);
+            injuries.Clear();
+
+            injuries.Add(mostImportantInjury);
+            remaining.Remove(mostImportantInjury);
 
             // Добавляем оставшиеся элементы
             injuries.AddRange(remaining);
@@ -114,10 +166,12 @@ namespace RegenerationUpgrade.Replacers
 
         public static Hediff_Injury GetMostDangerousInjury(IEnumerable<Hediff_Injury> injuries)
         {
+            Log.Message($"TEST");
             if (injuries == null || !injuries.Any())
                 return null;
 
             Pawn pawn = injuries.First().pawn;
+            Log.Message($"PAWN {pawn.LabelShort} имеет ген/иплант:{HasHealingUpgrade(pawn)}");
             // Если отсутствует имплант/ген берем как и по стандарту рандомную травму
             if (!HasHealingUpgrade(pawn))
                 return injuries.RandomElement();
@@ -131,7 +185,7 @@ namespace RegenerationUpgrade.Replacers
 
 
             // Если есть кровотечение, в первую очередь лечим его
-            if (pawn.health.CanBleed && pawn.health.hediffSet.BleedRateTotal >= 0.1f)
+            if (pawn.health.hediffSet.BleedRateTotal >= 0.1f)
             {
                 Hediff_Injury mostBleedingHediff = FindMostBleedingHediff(injuries);
                 if (mostBleedingHediff != null)
@@ -157,6 +211,8 @@ namespace RegenerationUpgrade.Replacers
 
             // Восстанавливаем критически важные части тела до 70% и возвращаем возможность передвигаться
             lifeThreatingInjury = GetDangerousInjuryToRecoverInInterval(pawn, injuries, 0.1f, 0.7f);
+            if (lifeThreatingInjury != null)
+                Log.Message($"PAWN {pawn.LabelShort}, травма:{lifeThreatingInjury.Label} на {lifeThreatingInjury.Part.Label}");
             if (lifeThreatingInjury != null)
                 return lifeThreatingInjury;
 

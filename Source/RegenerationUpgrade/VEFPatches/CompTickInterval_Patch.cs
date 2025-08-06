@@ -5,14 +5,25 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using VEF.AnimalBehaviours;
 using Verse;
 
 namespace RegenerationUpgrade.VEFPatches
 {
-    [HarmonyPatch(typeof(CompRegeneration), "CompTickInterval")]
+    //[HarmonyPatch(typeof(CompRegeneration), "CompTickInterval")]
     public static class CompTickInterval_Patch
     {
+        public static void ApplyPatch(Harmony harmony)
+        {
+            var type = AccessTools.TypeByName("VEF.AnimalBehaviours.CompRegeneration")
+                    ?? AccessTools.TypeByName("AnimalBehaviours.CompRegeneration");
+
+            var method = AccessTools.Method(type, "CompTickInterval")
+                        ?? AccessTools.Method(type, "CompTick");
+            Log.Message($"{method.Name}");
+
+            var transpiler = typeof(CompTickInterval_Patch).GetMethod(nameof(Transpiler), BindingFlags.Static | BindingFlags.NonPublic);
+            harmony.Patch(method, transpiler: new HarmonyMethod(transpiler));
+        }
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
             var codes = new List<CodeInstruction>(instructions);
@@ -35,7 +46,7 @@ namespace RegenerationUpgrade.VEFPatches
                 if (codes[i].Calls(randomElementMethod))
                 {
                     codes[i] = new CodeInstruction(OpCodes.Call, customMethod);
-                    //Log.Message($"Произогшла замена метода");
+                    Log.Message($"Произогшла замена метода в CompTick");
                 }
             }
 

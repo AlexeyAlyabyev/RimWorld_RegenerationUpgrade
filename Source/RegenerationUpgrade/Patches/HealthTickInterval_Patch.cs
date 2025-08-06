@@ -9,9 +9,20 @@ using Verse;
 
 namespace RegenerationUpgrade.Patches
 {
-    [HarmonyPatch(typeof(Pawn_HealthTracker), "HealthTickInterval")]
     public static class HealthTickInterval_Patch
     {
+        public static void ApplyPatch(Harmony harmony)
+        {
+            var type = typeof(Pawn_HealthTracker);
+
+            // Попробуй найти метод "HealthTickInterval", иначе fallback на "HealthTick"
+            var method = AccessTools.Method(type, "HealthTickInterval")
+                      ?? AccessTools.Method(type, "HealthTick");
+
+            var transpiler = typeof(HealthTickInterval_Patch).GetMethod(nameof(Transpiler), BindingFlags.Static | BindingFlags.NonPublic);
+            harmony.Patch(method, transpiler: new HarmonyMethod(transpiler));
+        }
+
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
             var codes = new List<CodeInstruction>(instructions);
