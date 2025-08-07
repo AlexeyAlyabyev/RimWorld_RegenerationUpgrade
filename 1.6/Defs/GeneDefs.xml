@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+    <GeneDef>
+        <defName>RU_HealingPriorityGene</defName>
+        <label>Desire to survive</label>
+        <description>It forces the body to heal life-threatening injuries in the first place.</description>
+        <geneClass>Gene</geneClass>
+        <displayCategory>Healing</displayCategory>
+        <biostatCpx>1</biostatCpx>
+        <biostatMet>-1</biostatMet>
+        <iconPath>UI/Icons/Genes/RU_HealingPriorityGene</iconPath>
+      </GeneDef>
+</Defs>

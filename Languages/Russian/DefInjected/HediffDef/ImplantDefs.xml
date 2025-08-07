@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<LanguageData>
+    <RU_HealingPriorityImplant.label>Система приоритизации исцеления</RU_HealingPriorityImplant.label>
+    <RU_HealingPriorityImplant.description>Внедряет наномашины, которые сканируют организм, оценивают тяжесть повреждений и приоритизируют регенерацию, начиная с наиболее критичных травм.</RU_HealingPriorityImplant.description>
+
+    
+</LanguageData>

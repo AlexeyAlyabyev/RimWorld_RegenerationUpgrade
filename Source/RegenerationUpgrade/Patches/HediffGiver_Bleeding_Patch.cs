@@ -231,6 +231,7 @@ namespace RegenerationUpgrade.Patches
         }
 
         // Получить множитель эффективности метаболизма (возвращает отличные от 1f результаты только для пешек с генами)
+        // TODO: Учитывать множитель от стата пищеварения пешки (если он больше 100%, тратим меньше еды, если меньше 100% тратим больше еды)
         private static float GetPawnMetabolismFactor(Pawn pawn)
         {
             float factor = MIN_FACTOR_VAL;

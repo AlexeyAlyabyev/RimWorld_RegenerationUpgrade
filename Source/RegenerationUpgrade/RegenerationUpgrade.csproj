@@ -42,6 +42,10 @@
       <HintPath>Libs\0VEF.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="0VFECore_1.5">
+      <HintPath>Libs\0VFECore_1.5.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Assembly-CSharp">
       <HintPath>Libs\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
@@ -58,9 +62,14 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="VEFPatches\GetInjuries_Patch.cs" />
+    <Compile Include="VEFPatches\CompPostTickInterval_Patch.cs" />
+    <Compile Include="VEFPatches\CompTickInterval_Patch.cs" />
+    <Compile Include="Patches\HealthTickInterval_Patch.cs" />
     <Compile Include="Patches\HediffGiver_Bleeding_Patch.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RegenerationUpgrade_Mod.cs" />
+    <Compile Include="Replacers\HealLogic_Replacer.cs" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
