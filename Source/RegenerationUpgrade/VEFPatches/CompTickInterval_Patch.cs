@@ -9,7 +9,6 @@ using Verse;
 
 namespace RegenerationUpgrade.VEFPatches
 {
-    //[HarmonyPatch(typeof(CompRegeneration), "CompTickInterval")]
     public static class CompTickInterval_Patch
     {
         public static void ApplyPatch(Harmony harmony)
@@ -19,7 +18,6 @@ namespace RegenerationUpgrade.VEFPatches
 
             var method = AccessTools.Method(type, "CompTickInterval")
                         ?? AccessTools.Method(type, "CompTick");
-            Log.Message($"{method.Name}");
 
             var transpiler = typeof(CompTickInterval_Patch).GetMethod(nameof(Transpiler), BindingFlags.Static | BindingFlags.NonPublic);
             harmony.Patch(method, transpiler: new HarmonyMethod(transpiler));
@@ -46,7 +44,6 @@ namespace RegenerationUpgrade.VEFPatches
                 if (codes[i].Calls(randomElementMethod))
                 {
                     codes[i] = new CodeInstruction(OpCodes.Call, customMethod);
-                    Log.Message($"Произогшла замена метода в CompTick");
                 }
             }
 

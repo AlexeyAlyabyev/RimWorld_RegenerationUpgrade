@@ -58,4 +58,16 @@
         <addsHediff>RU_HealingPriorityImplant</addsHediff>
         <uiIconThing>RU_HealingPriorityImplant</uiIconThing>
     </RecipeDef>   
+  
+    <RecipeDef ParentName="SurgeryRemoveImplantBase">
+        <defName>RU_RemoveHealingPriorityImplant</defName>
+        <label>Remove healing prioritization system</label>
+        <description>Remove healing prioritization system.</description>
+        <descriptionHyperlinks>
+            <ThingDef>RU_HealingPriorityImplant</ThingDef>
+            <HediffDef>RU_HealingPriorityImplant</HediffDef>
+        </descriptionHyperlinks>
+        <jobString>Removing healing prioritization system.</jobString>
+        <removesHediff>RU_HealingPriorityImplant</removesHediff>
+    </RecipeDef>
 </Defs>

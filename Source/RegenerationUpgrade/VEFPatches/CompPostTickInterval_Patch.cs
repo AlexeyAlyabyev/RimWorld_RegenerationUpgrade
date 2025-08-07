@@ -10,7 +10,6 @@ using Verse;
 
 namespace RegenerationUpgrade.VEFPatches
 {
-    //[HarmonyPatch(typeof(HediffComp_Regeneration), "CompPostTickInterval")]
     public static class CompPostTickInterval_Patch
     {
         public static void ApplyPatch(Harmony harmony)
@@ -46,7 +45,6 @@ namespace RegenerationUpgrade.VEFPatches
                 if (codes[i].Calls(randomElementMethod))
                 {
                     codes[i] = new CodeInstruction(OpCodes.Call, customMethod);
-                    Log.Message($"Произогшла замена метода в CompPostTick");
                 }
             }
 

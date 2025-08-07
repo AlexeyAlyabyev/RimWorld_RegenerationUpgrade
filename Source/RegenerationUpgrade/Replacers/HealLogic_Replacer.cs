@@ -21,8 +21,6 @@ namespace RegenerationUpgrade.Replacers
 
         public static Dictionary<PawnCapacityDef, float> capacityValueCache;
 
-        private static readonly Dictionary<Pawn, Hediff_Injury> lastDangerousInjuryByPawn = new Dictionary<Pawn, Hediff_Injury>();
-
         // Имеет ли пешка оптимизатор регенерации для применения патча
         private static bool HasHealingUpgrade(Pawn pawn)
         {
@@ -94,17 +92,9 @@ namespace RegenerationUpgrade.Replacers
             if (!HasHealingUpgrade(pawn))
                 return;
 
-            // Уже отсортировано, можно пропустить
-            if (lastDangerousInjuryByPawn.TryGetValue(pawn, out var previous) && previous == injuries[0])
-            {
-                return;
-            }
-
             Hediff_Injury mostImportantInjury = GetMostDangerousInjury(injuries);
             if (mostImportantInjury == null)
                 return;
-
-            lastDangerousInjuryByPawn[pawn] = mostImportantInjury;
 
             var remaining = new HashSet<Hediff_Injury>(injuries);
             injuries.Clear();
@@ -166,17 +156,14 @@ namespace RegenerationUpgrade.Replacers
 
         public static Hediff_Injury GetMostDangerousInjury(IEnumerable<Hediff_Injury> injuries)
         {
-            Log.Message($"TEST");
             if (injuries == null || !injuries.Any())
                 return null;
 
             Pawn pawn = injuries.First().pawn;
-            Log.Message($"PAWN {pawn.LabelShort} имеет ген/иплант:{HasHealingUpgrade(pawn)}");
             // Если отсутствует имплант/ген берем как и по стандарту рандомную травму
             if (!HasHealingUpgrade(pawn))
                 return injuries.RandomElement();
 
-            //Log.Message($"PAWN {pawn.LabelShort} ");
             SetPawnLethalCapacities(pawn);
             capacityValueCache = new Dictionary<PawnCapacityDef, float>();
             SetPawnCapacitiesCache(pawn);
@@ -202,17 +189,11 @@ namespace RegenerationUpgrade.Replacers
             {
                 Hediff_Injury bloodFiltrationInjury = MostImpactfulInjuryOnCapacity(pawn, injuries, PawnCapacityDefOf.BloodFiltration); // Фильтрация крови
                 if (bloodFiltrationInjury != null)
-                {
-                    //Log.Message($"PAWN {pawn.LabelShort} ");
-                    //Log.Message($"bloodFiltrationInjury {bloodFiltrationInjury.Label} on {bloodFiltrationInjury.Part?.Label ?? "null"}");
                     return bloodFiltrationInjury;
-                }
             }
 
             // Восстанавливаем критически важные части тела до 70% и возвращаем возможность передвигаться
             lifeThreatingInjury = GetDangerousInjuryToRecoverInInterval(pawn, injuries, 0.1f, 0.7f);
-            if (lifeThreatingInjury != null)
-                Log.Message($"PAWN {pawn.LabelShort}, травма:{lifeThreatingInjury.Label} на {lifeThreatingInjury.Part.Label}");
             if (lifeThreatingInjury != null)
                 return lifeThreatingInjury;
 
@@ -224,7 +205,6 @@ namespace RegenerationUpgrade.Replacers
             //MostImpactfulInjuryOnCapacity(pawn, injuries, PawnCapacityDefOf.Sight); // Зрение
             //MostImpactfulInjuryOnCapacity(pawn, injuries, PawnCapacityDefOf.Hearing); // Слух
             //MostImpactfulInjuryOnCapacity(pawn, injuries, PawnCapacityDefOf.Talking); // Общение (не важно)
-
             // Не забыть учесть что у бессмертных при впадании в смертосон должен восстанавливаться первым потерянный жизненно важный орган (ДОРАБОТКА ГЕНА РЕГЕНЕРАЦИИ КОНЕЧНОСТЕЙ)
 
             return injuries.RandomElement();
@@ -286,9 +266,6 @@ namespace RegenerationUpgrade.Replacers
                     hediff = injury;
                 }
             }
-            //Log.Message($"PAWN {pawn.LabelShort} ");
-            //Log.Message($"Injury BloodLoss -  {pawn.health.hediffSet.BleedRateTotal}");
-            //Log.Message($"mostBleeding Injury {hediff.Label} on {hediff.Part?.Label ?? "null"} get max priority");
 
             return hediff;
         }
@@ -325,8 +302,6 @@ namespace RegenerationUpgrade.Replacers
                 tendEffect = tendComp.TProps.severityPerDayTended * tendComp.tendQuality;
 
             // Сравнение: если иммунитет растёт быстрее, чем болезнь — пешка выживет
-            //Log.Message($"PAWN {pawn.LabelShort} имеет Immunity Gain Speed: {pawn.GetStatValue(StatDefOf.ImmunityGainSpeed)}");
-            //Log.Message($"PAWN {pawn.LabelShort} WillSurviveFromDisease {immunityPerDay > (severityPerDay + tendEffect)}");
             return immunityPerDay > (severityPerDay + tendEffect);
         }
 
@@ -471,7 +446,6 @@ namespace RegenerationUpgrade.Replacers
             if (mostCriticalPart != null)
             {
                 mostCriticalPartInjury = GetWorstInjuryOfPart(mostCriticalPart, injuries);
-                //Log.Message($"-- Самая опасная травма '{mostCriticalPartInjury.Label}' на '{mostCriticalPart.Label}'");
             }
 
             return mostCriticalPartInjury;
@@ -630,7 +604,6 @@ namespace RegenerationUpgrade.Replacers
             }
 
             // Проходимся по всем частям тела от снизу вверх по структуре
-            //foreach (var part in pawn.RaceProps.body.AllParts.OrderByDescending(p => GetBodyPartDepth(p)))
             foreach (var part in sortedParts)
             {
                 float partMaxHp = part.def.GetMaxHealth(pawn);

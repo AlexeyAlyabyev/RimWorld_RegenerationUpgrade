@@ -1,7 +1,6 @@
 ﻿using HarmonyLib;
 using RegenerationUpgrade.Replacers;
 using System.Collections.Generic;
-using System.Reflection;
 using Verse;
 
 namespace RegenerationUpgrade.VEFPatches
