@@ -53,7 +53,10 @@
             </thingDefs>
         </fixedIngredientFilter>
         <appliedOnFixedBodyParts>
-            <li>Torso</li>
+			<li>Body</li>
+			<li>SnakeBody</li>
+			<li>Torso</li>
+			<li>Shell</li>
         </appliedOnFixedBodyParts>
         <addsHediff>RU_HealingPriorityImplant</addsHediff>
         <uiIconThing>RU_HealingPriorityImplant</uiIconThing>
