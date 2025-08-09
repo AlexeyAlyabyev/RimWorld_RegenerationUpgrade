@@ -1,5 +1,5 @@
 ﻿using HarmonyLib;
-using RegenerationUpgrade.Replacers;
+using RegenerationUpgrade.Components;
 using RimWorld;
 using System.Collections.Generic;
 using System.Linq;
@@ -36,7 +36,7 @@ namespace RegenerationUpgrade.VEFPatches
                          && m.GetParameters()[0].ParameterType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
                 .MakeGenericMethod(typeof(Hediff_Injury));
             // Наш кастомный метод
-            var customMethod = AccessTools.Method(typeof(HealLogic_Replacer), nameof(HealLogic_Replacer.GetMostDangerousInjury));
+            var customMethod = AccessTools.Method(typeof(HealLogic_Component), nameof(HealLogic_Component.GetMostDangerousInjuryForPatches));
 
             for (int i = 0; i < codes.Count; i++)
             {

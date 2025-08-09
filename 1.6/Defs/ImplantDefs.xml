@@ -8,6 +8,11 @@
         <description>It implements nanomachines that scan the body, assess the severity of damage, and prioritize regeneration, starting with the most critical injuries.</description>
         <descriptionHyperlinks><ThingDef>RU_HealingPriorityImplant</ThingDef></descriptionHyperlinks>
         <spawnThingOnRemoved>RU_HealingPriorityImplant</spawnThingOnRemoved>
+		<comps>
+			<li Class="RegenerationUpgrade.HediffComps.RU_HC_RegenerationProperties">
+				<rateInTicks>20</rateInTicks>
+			</li>
+		</comps>
     </HediffDef>
 
     

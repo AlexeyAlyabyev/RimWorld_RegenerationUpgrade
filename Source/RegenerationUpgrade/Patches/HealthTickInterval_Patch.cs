@@ -1,5 +1,5 @@
 ﻿using HarmonyLib;
-using RegenerationUpgrade.Replacers;
+using RegenerationUpgrade.Components;
 using RimWorld;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,7 +31,7 @@ namespace RegenerationUpgrade.Patches
                 .MakeGenericMethod(typeof(Hediff_Injury));
             FieldInfo tmpHediffField = AccessTools.Field(typeof(Pawn_HealthTracker), "tmpHediffInjuries");
 
-            var sortMethod = AccessTools.Method(typeof(HealLogic_Replacer), nameof(HealLogic_Replacer.SortHediffList));
+            var sortMethod = AccessTools.Method(typeof(HealLogic_Component), nameof(HealLogic_Component.SortHediffList));
 
             // Получаем generic-метод RandomElement<T>(this IList<T>)
             var randomElementMethod = typeof(GenCollection)
@@ -43,7 +43,7 @@ namespace RegenerationUpgrade.Patches
                          && m.GetParameters()[0].ParameterType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
                 .MakeGenericMethod(typeof(Hediff_Injury));
             // Наш кастомный метод
-            var customMethod = AccessTools.Method(typeof(HealLogic_Replacer), nameof(HealLogic_Replacer.GetMostDangerousInjury));
+            var customMethod = AccessTools.Method(typeof(HealLogic_Component), nameof(HealLogic_Component.GetMostDangerousInjuryForPatches));
 
             int getHediffsCallCount = 0;
 

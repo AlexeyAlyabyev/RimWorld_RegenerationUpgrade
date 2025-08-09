@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+    <!-- <HediffDef>
+        <defName>RU_MechanoidRegeneration</defName>
+        <label>regeneration mechanoid</label>
+        <hediffClass>HediffWithComps</hediffClass>
+        <description>Regeneration Mechanoid</description>
+        <isBad>false</isBad>
+        <defaultLabelColor>(0.52, 1, 0.95)</defaultLabelColor>
+    </HediffDef> -->
+
+    <ThingDef ParentName="MU_MechUpgradeItemCraftable">
+        <defName>RU_MechanoidRegenerationModule</defName>
+        <label>regeneration mechanoid module</label>
+        <description>regeneration mechanoid module</description>
+        <graphicData>
+            <texPath>Things/Item/MechanoidUpgrade/MU_ShieldBooster</texPath>
+            <graphicClass>Graphic_Single</graphicClass>
+            <drawSize>(0.75, 0.75)</drawSize>
+        </graphicData>
+        <costList>
+            <Steel>50</Steel>
+            <ComponentIndustrial>8</ComponentIndustrial>
+            <Plasteel>60</Plasteel>
+            <Uranium>30</Uranium>
+            <ComponentSpacer>2</ComponentSpacer>
+            <Gold>1</Gold>
+        </costList>
+        <!-- <descriptionHyperlinks>
+            <HediffDef>RU_MechanoidRegeneration</HediffDef>
+        </descriptionHyperlinks> -->
+        <comps>
+            <li Class="MU.CompProperties_MechUpgrade">
+                <upgradeDef>RU_MechanoidRegenerationModule</upgradeDef>
+            </li>
+        </comps>
+        <statBases>
+            <MaxHitPoints>100</MaxHitPoints>
+            <Mass>5</Mass>
+            <Flammability>0.5</Flammability>
+            <DeteriorationRate>1</DeteriorationRate>
+            <WorkToMake>39000</WorkToMake>
+        </statBases>
+        <recipeMaker>
+            <recipeUsers Inherit="False">
+                <li>MU_AdvancedUpgradesAssembler</li>
+            </recipeUsers>
+        </recipeMaker>
+        <tradeTags>
+            <li>MU_UpgradeWithAbility</li>
+        </tradeTags>
+    </ThingDef>
+
+    <MU.MechUpgradeDef>
+        <defName>RU_MechanoidRegenerationModule</defName>
+        <label>MechanoidRegenerationModule</label>
+        <description>MechanoidRegenerationModule</description>
+        <uiIconPath>Things/Item/MechanoidUpgrade/MU_ShieldBooster</uiIconPath>
+        <!-- <descriptionHyperlinks>
+            <HediffDef>RU_MechanoidRegeneration</HediffDef>
+        </descriptionHyperlinks> -->
+        <linkedThingDef>RU_MechanoidRegenerationModule</linkedThingDef>
+        <upgradePoints>2</upgradePoints>
+        <commonality>1.5</commonality>
+        <comps>
+            <li Class="RegenerationUpgrade.UpgradeComps.RU_UC_RegenerationProperties">
+				<rateInTicks>20</rateInTicks>
+            </li>
+        </comps>
+    </MU.MechUpgradeDef>
+</Defs>

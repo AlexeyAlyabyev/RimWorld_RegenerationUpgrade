@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Verse;
 
-namespace RegenerationUpgrade.Replacers
+namespace RegenerationUpgrade.Components
 {
-    public static class HealLogic_Replacer
+    public static class HealLogic_Component
     {
         // кэш жизненно важных параметров по типу пешки
         public static Dictionary<ThingDef, List<PawnCapacityDef>> lethalCapsCacheByRace = new Dictionary<ThingDef, List<PawnCapacityDef>>();
@@ -25,9 +25,13 @@ namespace RegenerationUpgrade.Replacers
         private static bool HasHealingUpgrade(Pawn pawn)
         {
             // Проверка на ген
-            return HasActiveGene(pawn, DefDatabase<GeneDef>.GetNamed("RU_HealingPriorityGene")) == true
-                // или на имплант
-                || pawn.health?.hediffSet?.hediffs?.Any(h => h.def == HediffDef.Named("RU_HealingPriorityImplant")) == true;
+            bool hasHealingGene = HasActiveGene(pawn, DefDatabase<GeneDef>.GetNamed("RU_HealingPriorityGene")) == true;
+            //Log.Message($"hasHealingGene {hasHealingGene}");
+            // Проверка на имплант
+            bool hasHealingImplant = pawn.health?.hediffSet?.hediffs?.Any(h => h.def == HediffDef.Named("RU_HealingPriorityImplant")) == true;
+            //Log.Message($"hasHealingImplant {hasHealingImplant}");
+
+            return hasHealingGene || hasHealingImplant;
         }
 
         public static bool HasActiveGene(Pawn pawn, GeneDef geneDef)
@@ -154,14 +158,19 @@ namespace RegenerationUpgrade.Replacers
             capacityValueCache[PawnCapacityDefOf.Moving] = GetCapacityValue(pawn, PawnCapacityDefOf.Moving);
         }
 
-        public static Hediff_Injury GetMostDangerousInjury(IEnumerable<Hediff_Injury> injuries)
+        public static Hediff_Injury GetMostDangerousInjuryForPatches(IEnumerable<Hediff_Injury> injuries)
+        {
+            return GetMostDangerousInjury(injuries);
+        }
+
+        public static Hediff_Injury GetMostDangerousInjury(IEnumerable<Hediff_Injury> injuries, bool hasUpgrade = false)
         {
             if (injuries == null || !injuries.Any())
                 return null;
 
             Pawn pawn = injuries.First().pawn;
             // Если отсутствует имплант/ген берем как и по стандарту рандомную травму
-            if (!HasHealingUpgrade(pawn))
+            if (!HasHealingUpgrade(pawn) && !hasUpgrade)
                 return injuries.RandomElement();
 
             SetPawnLethalCapacities(pawn);

@@ -1,5 +1,5 @@
 ﻿using HarmonyLib;
-using RegenerationUpgrade.Replacers;
+using RegenerationUpgrade.Components;
 using System.Collections.Generic;
 using Verse;
 
@@ -36,11 +36,11 @@ namespace RegenerationUpgrade.VEFPatches
 
         public static void Postfix(Pawn pawn, BodyPartDef bodypart, ref List<Hediff_Injury> __result)
         {
-            HealLogic_Replacer.SortHediffListVEF(__result);
+            HealLogic_Component.SortHediffListVEF(__result);
         }
         public static void PostfixOld(Pawn pawn, ref List<Hediff_Injury> __result)
         {
-            HealLogic_Replacer.SortHediffListVEF(__result);
+            HealLogic_Component.SortHediffListVEF(__result);
         }
     }
 }
